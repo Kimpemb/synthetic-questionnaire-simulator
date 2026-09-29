@@ -1,9 +1,10 @@
 import random
 
 from app.domain.models import Question, QuestionType
+from app.generation.base import AnswerGenerator
 
 
-class RandomAnswerGenerator:
+class RandomAnswerGenerator(AnswerGenerator):
     def __init__(self, seed: int | None = None):
         self._random = random.Random(seed)
 
