@@ -123,3 +123,12 @@ class SimulationResult:
     visited_questions: list[str] = field(default_factory=list)
     skipped_questions: list[str] = field(default_factory=list)
     logic_trace: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class BatchSimulationResult:
+    results: list[SimulationResult]
+    status: SimulationStatus
+    total_requested: int
+    total_completed: int
+    total_failed: int
