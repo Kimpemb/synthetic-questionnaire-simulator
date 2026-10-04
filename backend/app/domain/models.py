@@ -114,11 +114,12 @@ class ValidationResult:
     errors: list[ValidationError] = field(default_factory=list)
     warnings: list[ValidationError] = field(default_factory=list)
 
-
 @dataclass
 class SimulationResult:
     respondent_id: str
     answers: dict[str, Any]
-    validation: ValidationResult
-    status: SimulationStatus
+    validation: ValidationResult | None = None
+    status: SimulationStatus = SimulationStatus.COMPLETED
+    visited_questions: list[str] = field(default_factory=list)
+    skipped_questions: list[str] = field(default_factory=list)
     logic_trace: list[dict[str, Any]] = field(default_factory=list)
