@@ -49,25 +49,40 @@ class XLSFormParser:
             data_only=True,
         )
 
-        missing_sheets = self.REQUIRED_SHEETS - set(workbook.sheetnames)
-
-        if missing_sheets:
-            raise ValueError(
-                f"XLSForm is missing required sheets: "
-                f"{sorted(missing_sheets)}"
+        try:
+            missing_sheets = (
+                self.REQUIRED_SHEETS
+                - set(workbook.sheetnames)
             )
 
-        settings = self._parse_settings(workbook)
-        choices = self._parse_choices(workbook)
-        questions = self._parse_questions(workbook, choices)
+            if missing_sheets:
+                raise ValueError(
+                    f"XLSForm is missing required sheets: "
+                    f"{sorted(missing_sheets)}"
+                )
 
-        return Form(
-            id=settings.get("form_id", file_path.stem),
-            title=settings.get("form_title", file_path.stem),
-            questions=questions,
-            version=settings.get("version"),
-            metadata=settings,
-        )
+            settings = self._parse_settings(workbook)
+            choices = self._parse_choices(workbook)
+            questions = self._parse_questions(
+                workbook,
+                choices,
+            )
+
+            return Form(
+                id=settings.get(
+                    "form_id",
+                    file_path.stem,
+                ),
+                title=settings.get(
+                    "form_title",
+                    file_path.stem,
+                ),
+                questions=questions,
+                version=settings.get("version"),
+                metadata=settings,
+            )
+        finally:
+            workbook.close()
 
     def _parse_settings(self, workbook) -> dict[str, str]:
         if "settings" not in workbook.sheetnames:
