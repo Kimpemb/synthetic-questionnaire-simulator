@@ -21,16 +21,21 @@ def test_simulation_traverses_real_questionnaire():
         seed=42
     ).generate()
 
+    MAX_GENERATION_ATTEMPTS = 100
+
     engine = SimulationEngine(
         answer_generator=RandomAnswerGenerator(
             seed=42
-        )
+        ),
+        max_generation_attempts=MAX_GENERATION_ATTEMPTS,
     )
 
     result = engine.simulate(
         form,
         respondent,
     )
+
+     
 
     assert result.status == SimulationStatus.COMPLETED
     assert result.respondent_id == respondent.id

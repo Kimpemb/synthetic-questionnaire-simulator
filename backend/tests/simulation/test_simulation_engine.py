@@ -1,11 +1,23 @@
 from app.domain.models import (
+    Constraint,
     Form,
     Question,
     QuestionType,
+    RelevanceCondition,
     Respondent,
 )
+
+from app.generation.base import AnswerGenerator
 from app.generation.random import RandomAnswerGenerator
 from app.simulation.engine import SimulationEngine
+
+
+class SequenceAnswerGenerator(AnswerGenerator):
+    def __init__(self, answers):
+        self._answers = iter(answers)
+
+    def generate(self, question):
+        return next(self._answers)
 
 
 def test_simulation_answers_relevant_questions():
@@ -53,13 +65,8 @@ def test_simulation_skips_irrelevant_questions():
                 name="social_media_years",
                 type=QuestionType.INTEGER,
                 label="Years using social media",
-                relevance=(
-                    __import__(
-                        "app.domain.models",
-                        fromlist=["RelevanceCondition"],
-                    ).RelevanceCondition(
-                        expression="${has_social_media} = true"
-                    )
+                relevance=RelevanceCondition(
+                    expression="${has_social_media} = true"
                 ),
             ),
         ],
@@ -75,12 +82,7 @@ def test_simulation_skips_irrelevant_questions():
 
     if result.answers["has_social_media"] is False:
         assert "social_media_years" not in result.answers
-        assert (
-            "social_media_years"
-            in result.skipped_questions
-            if hasattr(result, "skipped_questions")
-            else True
-        )
+        assert "social_media_years" in result.skipped_questions
 
 
 def test_simulation_preserves_question_order():
@@ -119,3 +121,71 @@ def test_simulation_preserves_question_order():
         "second",
         "third",
     ]
+
+
+def test_simulation_regenerates_invalid_answer_until_valid():
+    form = Form(
+        id="test-form",
+        title="Test Form",
+        questions=[
+            Question(
+                name="age",
+                type=QuestionType.INTEGER,
+                label="Age",
+                constraint=Constraint(
+                    expression=". >= 15 and . <= 100"
+                ),
+            ),
+        ],
+    )
+
+    respondent = Respondent(id="respondent-1")
+
+    generator = SequenceAnswerGenerator(
+        [10, 120, 25]
+    )
+
+    engine = SimulationEngine(
+        answer_generator=generator,
+        max_generation_attempts=3,
+    )
+
+    result = engine.simulate(form, respondent)
+
+    assert result.status.value == "completed"
+    assert result.answers["age"] == 25
+
+
+def test_simulation_fails_after_max_generation_attempts():
+    form = Form(
+        id="test-form",
+        title="Test Form",
+        questions=[
+            Question(
+                name="age",
+                type=QuestionType.INTEGER,
+                label="Age",
+                constraint=Constraint(
+                    expression=". >= 15 and . <= 100"
+                ),
+            ),
+        ],
+    )
+
+    respondent = Respondent(id="respondent-1")
+
+    generator = SequenceAnswerGenerator(
+        [10, 120, 5]
+    )
+
+    engine = SimulationEngine(
+        answer_generator=generator,
+        max_generation_attempts=3,
+    )
+
+    result = engine.simulate(form, respondent)
+
+    assert result.status.value == "failed"
+    assert result.validation is not None
+    assert result.validation.valid is False
+    assert result.answers == {}

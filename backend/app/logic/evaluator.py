@@ -1,4 +1,5 @@
 import re
+
 from typing import Any
 
 
@@ -9,6 +10,7 @@ class ExpressionEvaluator:
         self,
         expression: str,
         answers: dict[str, Any],
+        current_value: Any = None,
     ) -> bool:
         expression = expression.strip()
 
@@ -19,6 +21,7 @@ class ExpressionEvaluator:
             return self._evaluate_expression(
                 expression,
                 answers,
+                current_value,
             )
         except (ValueError, TypeError, KeyError):
             return False
@@ -27,6 +30,7 @@ class ExpressionEvaluator:
         self,
         expression: str,
         answers: dict[str, Any],
+        current_value: Any = None,
     ) -> bool:
         or_parts = self._split_operator(
             expression,
@@ -38,6 +42,7 @@ class ExpressionEvaluator:
                 self._evaluate_expression(
                     part,
                     answers,
+                    current_value,
                 )
                 for part in or_parts
             )
@@ -52,6 +57,7 @@ class ExpressionEvaluator:
                 self._evaluate_expression(
                     part,
                     answers,
+                    current_value,
                 )
                 for part in and_parts
             )
@@ -59,15 +65,17 @@ class ExpressionEvaluator:
         return self._evaluate_comparison(
             expression,
             answers,
+            current_value,
         )
 
     def _evaluate_comparison(
         self,
         expression: str,
         answers: dict[str, Any],
+        current_value: Any = None,
     ) -> bool:
         match = re.match(
-            r"^\s*(\$\{\w+\})\s*(>=|<=|!=|==|=|>|<)\s*(.+?)\s*$",
+            r"^\s*(\$\{\w+\}|\.)\s*(>=|<=|!=|==|=|>|<)\s*(.+?)\s*$",
             expression,
         )
 
@@ -78,15 +86,33 @@ class ExpressionEvaluator:
 
         reference, operator, raw_value = match.groups()
 
-        question_name = self._extract_reference(
-            reference
-        )
+        if reference == ".":
+            actual_value = current_value
+        else:
+            question_name = self._extract_reference(
+                reference
+            )
 
-        if question_name not in answers:
-            return False
+            if question_name not in answers:
+                return False
 
-        actual_value = answers[question_name]
-        expected_value = self._parse_value(raw_value)
+            actual_value = answers[question_name]
+
+        if self.REFERENCE_PATTERN.fullmatch(
+            raw_value.strip()
+        ):
+            expected_question = self._extract_reference(
+                raw_value.strip()
+            )
+
+            if expected_question not in answers:
+                return False
+
+            expected_value = answers[expected_question]
+        else:
+            expected_value = self._parse_value(
+                raw_value
+            )
 
         return self._compare(
             actual_value,

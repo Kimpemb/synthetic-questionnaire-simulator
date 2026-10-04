@@ -68,3 +68,57 @@ def test_missing_reference_returns_false():
         "${sex} = 'female'",
         answers,
     ) is False
+
+def test_evaluates_reference_against_reference():
+    evaluator = ExpressionEvaluator()
+
+    assert evaluator.evaluate(
+        "${start_age} <= ${end_age}",
+        {
+            "start_age": 25,
+            "end_age": 30,
+        },
+    )
+
+
+def test_rejects_reference_against_reference_when_false():
+    evaluator = ExpressionEvaluator()
+
+    assert not evaluator.evaluate(
+        "${start_age} <= ${end_age}",
+        {
+            "start_age": 35,
+            "end_age": 30,
+        },
+    )
+
+
+def test_evaluates_current_value_against_reference():
+    evaluator = ExpressionEvaluator()
+
+    assert evaluator.evaluate(
+        "${daily_hours} <= ${available_hours}",
+        {
+            "daily_hours": 6.0,
+            "available_hours": 8.0,
+        },
+    )    
+
+def test_evaluates_current_value_greater_than_or_equal():
+    evaluator = ExpressionEvaluator()
+
+    assert evaluator.evaluate(
+        ". >= 15",
+        {},
+        current_value=81,
+    )
+
+
+def test_evaluates_current_value_range():
+    evaluator = ExpressionEvaluator()
+
+    assert evaluator.evaluate(
+        ". >= 15 and . <= 100",
+        {},
+        current_value=81,
+    )
